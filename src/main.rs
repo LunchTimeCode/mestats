@@ -10,9 +10,6 @@ async fn main() {
 
     match res {
         Ok(message) => {
-            let raw = message.1;
-            let out = message.0;
-            let message = if raw { out } else { format!("{}", out) };
             println!("{message}")
         }
 

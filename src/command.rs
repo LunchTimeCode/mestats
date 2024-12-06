@@ -3,18 +3,20 @@ use clap::{Parser, Subcommand};
 
 use crate::gh;
 
-pub async fn figure() -> anyhow::Result<(String, bool)> {
+pub async fn figure() -> anyhow::Result<String> {
     let cli = Cli::parse();
 
     let result: anyhow::Result<String> = match cli.command {
-        Some(Commands::Get { token, org, user }) => gh::get_contributors(token, org, user).await,
+        Some(Commands::Get { token, anonymous }) => {
+            gh::get_all_contributions(token, anonymous.unwrap_or_default()).await
+        }
         Some(Commands::Init {}) => Err(anyhow!("Not Implemented".to_string())),
         Some(Commands::Markdown) => Ok(clap_markdown::help_markdown::<Cli>()),
         None => Ok("try me --help for information on how to use me".to_string()),
     };
 
     match result {
-        Ok(o) => Ok((o, cli.raw)),
+        Ok(o) => Ok(o),
         Err(err) => Err(err),
     }
 }
@@ -23,9 +25,6 @@ pub async fn figure() -> anyhow::Result<(String, bool)> {
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about, name = "me")]
 struct Cli {
-    #[arg(short, long, default_value_t = false)]
-    raw: bool,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -44,12 +43,7 @@ enum Commands {
         #[arg(short, long, env = "GITHUB_TOKEN")]
         token: String,
 
-        /// [STABLE] github organisation
-        #[arg(short, long)]
-        org: String,
-
-        /// [STABLE] github user
-        #[arg(short, long)]
-        user: String,
+        #[arg(short, long, env = "ME_ANONYMOUS")]
+        anonymous: Option<Vec<String>>,
     },
 }

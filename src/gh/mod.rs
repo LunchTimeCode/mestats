@@ -1,16 +1,55 @@
-use anyhow::Ok;
+use std::fs;
+
 use mestats_model::Contributions;
 use mestats_model::Stats;
 
 pub mod prepare;
 
-pub async fn get_contributors(
+pub async fn get_all_contributions(
     token: String,
-    owner: String,
-    user_name: String,
+    anonymous: Vec<String>,
 ) -> anyhow::Result<String> {
-    println!("{owner}");
     prepare::auth(token);
+    let octocrab = octocrab::instance();
+    let user_name = octocrab.current().user().await?.login;
+    let orgs = octocrab
+        .current()
+        .list_org_memberships_for_authenticated_user()
+        .send()
+        .await
+        .unwrap();
+    let mut cos: Vec<Contributions> = vec![];
+
+    println!("Fetching contributions for {}", user_name);
+
+    for org in orgs.items {
+        println!("Fetching contributions to {:?}", org.organization.login);
+        let org = org.organization.login;
+        let pot_cos = get_contributors(org, user_name.clone()).await;
+        if let Ok(mut actual) = pot_cos {
+            cos.append(&mut actual);
+        }
+    }
+
+    let anon = cos
+        .iter()
+        .map(|c| {
+            if anonymous.contains(c.owner()) {
+                c.anonymize()
+            } else {
+                c.clone()
+            }
+        })
+        .collect::<Vec<Contributions>>();
+
+    let toml_string = Stats::new(anon).as_toml();
+
+    fs::write("stats.toml", toml_string)?;
+
+    Ok("Got all contributions".to_string())
+}
+
+async fn get_contributors(owner: String, user_name: String) -> anyhow::Result<Vec<Contributions>> {
     let octocrab = octocrab::instance();
     let page: u32 = 0;
     let max: u8 = 100;
@@ -33,7 +72,7 @@ pub async fn get_contributors(
             .per_page(max)
             .send()
             .await
-            .unwrap()
+            .unwrap_or_default()
             .items;
 
         let lang = octocrab
@@ -45,19 +84,18 @@ pub async fn get_contributors(
         for contributor in cso.iter() {
             cs.push(Contributions::new(
                 contributor.author.login.clone(),
+                owner.clone(),
                 repo.name.clone(),
-                contributor.contributions.clone(),
+                contributor.contributions,
                 lang.clone(),
             ));
         }
     }
 
     let only_user = cs
-        .iter()
-        .cloned()
+        .into_iter()
         .filter(|c| c.login() == &user_name)
         .collect::<Vec<Contributions>>();
-    let s = Stats::new(only_user).as_toml();
 
-    Ok(s)
+    Ok(only_user)
 }
