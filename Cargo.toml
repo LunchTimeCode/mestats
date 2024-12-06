@@ -1,0 +1,22 @@
+[package]
+name = "mestats"
+version = "0.1.0"
+edition = "2021"
+
+
+[workspace]
+
+members = [
+    "model",
+]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+anyhow = "1.0.94"
+clap = { version = "4.5.23", features = ["derive", "unstable-doc", "env"] }
+clap-markdown = "0.1.3"
+serde = "1.0"
+serde_derive = "1"
+octocrab = "0.42.1"
+reqwest = { version = "0.12.4", features = ["blocking", "json","native-tls-vendored"], default-features = false}
+
