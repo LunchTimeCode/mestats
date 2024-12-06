@@ -10,10 +10,14 @@ log := "warn"
     just --list --unsorted
 
 run *args:
-    cargo run -q -- {{args}}
+    cargo run -q -- {{args}}    
 
 install:
     cargo install --path .
+    
+# Run the application
+i: install
+    me get -a "Optravis-LLC"
 
 # Perform all verifications (compile, test, lint, etc.)
 @verify: test lint
