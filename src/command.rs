@@ -1,17 +1,13 @@
-
-
-
 use anyhow::anyhow;
 use clap::{Parser, Subcommand};
 
 use crate::gh;
 
-
 pub async fn figure() -> anyhow::Result<(String, bool)> {
     let cli = Cli::parse();
 
     let result: anyhow::Result<String> = match cli.command {
-        Some(Commands::Get { token, org  })=> gh::all_repos(token, org).await,
+        Some(Commands::Get { token, org, user }) => gh::get_contributors(token, org, user).await,
         Some(Commands::Init {}) => Err(anyhow!("Not Implemented".to_string())),
         Some(Commands::Markdown) => Ok(clap_markdown::help_markdown::<Cli>()),
         None => Ok("try me --help for information on how to use me".to_string()),
@@ -52,5 +48,8 @@ enum Commands {
         #[arg(short, long)]
         org: String,
 
+        /// [STABLE] github user
+        #[arg(short, long)]
+        user: String,
     },
 }
